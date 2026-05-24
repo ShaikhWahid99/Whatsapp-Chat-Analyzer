@@ -67,13 +67,11 @@ def preprocess(data):
     df['minute'] = df['date'].dt.minute
 
     period = []
-    for hour in df[['day_name', 'hour']]['hour']:
+    for hour in df['hour']:
         if hour == 23:
-            period.append(str(hour) + "-" + str('00'))
-        elif hour == 0:
-            period.append(str('00') + "-" + str(hour + 1))
+            period.append("23-00")
         else:
-            period.append(str(hour) + "-" + str(hour + 1))
+            period.append(f"{hour:02d}-{(hour+1):02d}")
 
     df['period'] = period
 

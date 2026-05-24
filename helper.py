@@ -139,26 +139,25 @@ def month_activity_map(selected_user,df):
 
     return df['month'].value_counts()
 
-def activity_heatmap(selected_user,df):
-
+def activity_heatmap(selected_user, df):
     if selected_user != 'Overall':
         df = df[df['user'] == selected_user]
 
+    
     user_heatmap = df.pivot_table(index='day_name', columns='period', values='message', aggfunc='count').fillna(0)
 
+    
+    days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    
+    
+    periods = []
+    for hour in range(24):
+        if hour == 23:
+            periods.append("23-00")
+        else:
+            periods.append(f"{hour:02d}-{(hour+1):02d}")
+
+    
+    user_heatmap = user_heatmap.reindex(index=days, columns=periods, fill_value=0)
+
     return user_heatmap
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

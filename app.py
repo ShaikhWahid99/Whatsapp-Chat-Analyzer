@@ -5,6 +5,7 @@ import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 from wordcloud import WordCloud
+import streamlit.components.v1 as components
 
 # Page Configuration
 st.set_page_config(page_title="WhatsApp Insight", layout="wide", page_icon="📊")
@@ -72,8 +73,119 @@ st.markdown("""
         padding-top: 10px;
         padding-bottom: 10px;
     }
+
+    /* Sticky insight navigation */
+    .insight-nav-wrapper {
+        position: sticky;
+        top: 0;
+        z-index: 999;
+        background: rgb(14, 17, 23);
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+        margin-bottom: 1rem;
+    }
+    .insight-nav {
+        display: flex;
+        gap: 24px;
+        overflow-x: auto;
+        border-bottom: 1px solid rgba(250, 250, 250, 0.2);
+    }
+    .insight-nav a {
+        height: 50px;
+        white-space: nowrap;
+        background-color: transparent;
+        border-radius: 4px 4px 0px 0px;
+        padding: 10px 16px;
+        color: rgba(250, 250, 250, 0.6);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        border-bottom: 2px solid transparent;
+        font-weight: 400;
+    }
+    .insight-nav a:hover {
+        color: rgba(250, 250, 250, 0.95);
+    }
+    .insight-nav a.active {
+        color: #ffffff;
+        border-bottom-color: #ff4b4b;
+    }
+    .insight-section {
+        scroll-margin-top: 90px;
+        padding-top: 0.25rem;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+
+def render_insight_nav():
+    st.markdown("""
+    <div class="insight-nav-wrapper">
+        <nav class="insight-nav" aria-label="Insight sections">
+            <a href="#timelines" data-section="timelines" class="active">&#128338; Timelines</a>
+            <a href="#activity-map" data-section="activity-map">&#128202; Activity Map</a>
+            <a href="#user-insights" data-section="user-insights">&#128269; User Insights</a>
+            <a href="#content-analysis" data-section="content-analysis">&#128292; Content Analysis</a>
+        </nav>
+    </div>
+    """, unsafe_allow_html=True)
+
+    components.html("""
+    <script>
+    const doc = window.parent.document;
+    const sectionIds = ["timelines", "activity-map", "user-insights", "content-analysis"];
+
+    function syncActiveNav() {
+        const links = Array.from(doc.querySelectorAll(".insight-nav a"));
+        const sections = sectionIds
+            .map((id) => doc.getElementById(id))
+            .filter(Boolean);
+
+        if (!links.length || !sections.length) {
+            return;
+        }
+
+        let activeId = sections[0].id;
+        let nearestDistance = Number.POSITIVE_INFINITY;
+
+        sections.forEach((section) => {
+            const rect = section.getBoundingClientRect();
+            const distance = Math.abs(rect.top - 110);
+
+            if (rect.top <= 160 && distance < nearestDistance) {
+                nearestDistance = distance;
+                activeId = section.id;
+            }
+        });
+
+        if ((window.parent.innerHeight + window.parent.scrollY) >= doc.documentElement.scrollHeight - 4) {
+            activeId = sections[sections.length - 1].id;
+        }
+
+        links.forEach((link) => {
+            link.classList.toggle("active", link.dataset.section === activeId);
+        });
+    }
+
+    doc.querySelectorAll(".insight-nav a").forEach((link) => {
+        link.addEventListener("click", (event) => {
+            const target = doc.getElementById(link.dataset.section);
+            if (!target) {
+                return;
+            }
+
+            event.preventDefault();
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+            window.parent.history.replaceState(null, "", "#" + link.dataset.section);
+            setTimeout(syncActiveNav, 300);
+        });
+    });
+
+    window.parent.addEventListener("scroll", syncActiveNav, { passive: true });
+    window.parent.addEventListener("resize", syncActiveNav);
+    syncActiveNav();
+    </script>
+    """, height=0)
 
 # Sidebar
 st.sidebar.markdown('<p style="font-size: 24px; font-weight: bold; color: #00d4ff;">WA Insight 📊</p>', unsafe_allow_html=True)
@@ -115,10 +227,11 @@ if uploaded_file is not None:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Tabs for different sections
-    tab1, tab2, tab3, tab4 = st.tabs(["🕒 Timelines", "📊 Activity Map", "🔍 User Insights", "🔤 Content Analysis"])
+    # Sticky navigation for the full-page insight sections
+    render_insight_nav()
 
-    with tab1:
+    st.markdown('<div id="timelines" class="insight-section"></div>', unsafe_allow_html=True)
+    if True:
         st.subheader("Message Volume Over Time")
         
         # Monthly Timeline (Plotly)
@@ -137,7 +250,8 @@ if uploaded_file is not None:
         fig2.update_layout(hovermode="x unified")
         st.plotly_chart(fig2, use_container_width=True)
 
-    with tab2:
+    st.markdown('<div id="activity-map" class="insight-section"></div>', unsafe_allow_html=True)
+    if True:
         col1, col2 = st.columns(2)
         
         with col1:
@@ -165,7 +279,8 @@ if uploaded_file is not None:
         else:
             st.info("Not enough data for heatmap.")
 
-    with tab3:
+    st.markdown('<div id="user-insights" class="insight-section"></div>', unsafe_allow_html=True)
+    if True:
         if selected_user == 'Overall':
             st.subheader("Most Active Users")
             x, new_df = helper.most_busy_users(df)
@@ -180,7 +295,8 @@ if uploaded_file is not None:
         else:
             st.info("User insights are available in 'Overall' mode to compare with others.")
 
-    with tab4:
+    st.markdown('<div id="content-analysis" class="insight-section"></div>', unsafe_allow_html=True)
+    if True:
         st.subheader("Word Cloud")
         df_wc = helper.create_wordcloud(selected_user, df)
         if df_wc:
