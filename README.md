@@ -1,11 +1,43 @@
-Developed in my 6th semester as a part of Python practice and data analysis exploration. This tool analyzes exported WhatsApp chats and generates insights like most active participants, message frequency, emoji usage and more. It also includes graphs, pie charts, and other visual elements for better data visualization.
+# WhatsApp Insight 📊
 
-This project was built earlier, but I’m sharing it now to highlight my data-handling and Python scripting capabilities relevant to the internship role I’m applying for.
+A premium WhatsApp Chat Analyzer built with Python and Streamlit. Transform your exported chat history into interactive visual intelligence.
 
-This project is made using python librarires like :-
-1) Pandas
-2) Numpy
-3) Matplot lib
-4) Streamlit
-5) Seaborn
-6) Regex
+## ✨ Features
+
+- **Premium UI**: Glassmorphic dark-theme design with modern aesthetics.
+- **Interactive Reports**: Powered by Plotly for zoomable and hoverable charts.
+- **Deep Insights**:
+  - **Message Volume**: Daily and monthly trends.
+  - **Activity Mapping**: Identify the busiest days and hours.
+  - **User Comparison**: Compare activity across group members.
+  - **Content Analysis**: Wordclouds and common word frequency (with Hinglish filtering).
+  - **Emoji Sentiment**: Analyze the most used emojis.
+
+## 🚀 Getting Started
+
+### 1. Installation
+```bash
+# Clone the repository
+git clone https://github.com/ShaikhWahid99/Whatsapp-Chat-Analyzer.git
+cd Whatsapp-Chat-Analyzer
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 2. Run the App
+```bash
+streamlit run app.py
+```
+
+## 📱 How to Export Your Chat
+1. Open the WhatsApp chat you want to analyze.
+2. Tap the three dots (Menu) > **More** > **Export chat**.
+3. Select **Without Media** for a faster export.
+4. Upload the generated `.txt` file to the app.
+
+## 🛠️ Tech Stack
+- **Dashboard**: Streamlit
+- **Data Processing**: Pandas, Regex
+- **Visualization**: Plotly, Matplotlib, Seaborn
+- **NLP**: WordCloud, URLExtract, Emoji

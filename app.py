@@ -1,181 +1,231 @@
 import streamlit as st
-import preprocessor,helper
+import preprocessor, helper
 import matplotlib.pyplot as plt
 import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
+from wordcloud import WordCloud
 
-st.sidebar.title("Whatsapp Chat Analyzer")
+# Page Configuration
+st.set_page_config(page_title="WhatsApp Insight", layout="wide", page_icon="📊")
 
-uploaded_file = st.sidebar.file_uploader("Choose a file")
+# Custom CSS for Premium Look
+st.markdown("""
+<style>
+    /* Glassmorphism effect for metrics */
+    .metric-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        text-align: center;
+        transition: transform 0.3s ease;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+        border-color: #00d4ff;
+    }
+    .metric-label {
+        font-size: 14px;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .metric-value {
+        font-size: 32px;
+        font-weight: bold;
+        color: #00d4ff;
+    }
+    
+    /* Title Styling */
+    .main-title {
+        font-size: 3rem;
+        font-weight: 800;
+        background: -webkit-linear-gradient(#00d4ff, #0055ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0px;
+    }
+    .sub-title {
+        font-size: 1.2rem;
+        color: #555;
+        margin-bottom: 2rem;
+    }
+    
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #111;
+        border-right: 1px solid #333;
+    }
+    
+    /* Tabs Styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 24px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: transparent;
+        border-radius: 4px 4px 0px 0px;
+        gap: 1px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Sidebar
+st.sidebar.markdown('<p style="font-size: 24px; font-weight: bold; color: #00d4ff;">WA Insight 📊</p>', unsafe_allow_html=True)
+
+uploaded_file = st.sidebar.file_uploader("Upload WhatsApp Chat Export (.txt)")
+
 if uploaded_file is not None:
     bytes_data = uploaded_file.getvalue()
     data = bytes_data.decode("utf-8")
     df = preprocessor.preprocess(data)
 
     if df.empty:
-        st.error("No WhatsApp messages were found in this file. Please upload the exported .txt chat file, not a ZIP or media file.")
+        st.error("Could not parse this file. Please ensure it's a valid WhatsApp export.")
         st.stop()
 
-    
+    # User Selection
     user_list = [user for user in df['user'].unique().tolist() if user != 'group_notification']
     user_list.sort()
-    user_list.insert(0,"Overall")
+    user_list.insert(0, "Overall")
+    selected_user = st.sidebar.selectbox("Analyze For:", user_list)
 
-    selected_user = st.sidebar.selectbox("Show analysis wrt",user_list)
+    # Main Area
+    st.markdown(f'<h1 class="main-title">Analysis Report</h1>', unsafe_allow_html=True)
+    st.markdown(f'<p class="sub-title">Exploring insights for: <b>{selected_user}</b></p>', unsafe_allow_html=True)
 
-    show_analysis = st.sidebar.button("Show Analysis")
+    # Stats Area (Metric Cards)
+    num_messages, words, num_media_messages, num_links = helper.fetch_stats(selected_user, df)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown(f'<div class="metric-card"><div class="metric-label">Total Messages</div><div class="metric-value">{num_messages}</div></div>', unsafe_allow_html=True)
+    with col2:
+        st.markdown(f'<div class="metric-card"><div class="metric-label">Total Words</div><div class="metric-value">{words}</div></div>', unsafe_allow_html=True)
+    with col3:
+        st.markdown(f'<div class="metric-card"><div class="metric-label">Media Shared</div><div class="metric-value">{num_media_messages}</div></div>', unsafe_allow_html=True)
+    with col4:
+        st.markdown(f'<div class="metric-card"><div class="metric-label">Links Shared</div><div class="metric-value">{num_links}</div></div>', unsafe_allow_html=True)
 
-    if not show_analysis:
-        preview_df = df if selected_user == 'Overall' else df[df['user'] == selected_user]
-        preview_messages, preview_words, preview_media, preview_links = helper.fetch_stats(selected_user, df)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-        st.title("Whatsapp Chat Analyzer")
-        st.subheader(f"Ready to analyze: {selected_user}")
-        st.info("Click Show Analysis in the sidebar to generate the full report.")
+    # Tabs for different sections
+    tab1, tab2, tab3, tab4 = st.tabs(["🕒 Timelines", "📊 Activity Map", "🔍 User Insights", "🔤 Content Analysis"])
 
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Messages", preview_messages)
-        with col2:
-            st.metric("Words", preview_words)
-        with col3:
-            st.metric("Media", preview_media)
-        with col4:
-            st.metric("Links", preview_links)
-
-        if not preview_df.empty:
-            st.caption(
-                "Chat range: "
-                + str(preview_df['only_date'].min())
-                + " to "
-                + str(preview_df['only_date'].max())
-            )
-
-    if show_analysis:
-
+    with tab1:
+        st.subheader("Message Volume Over Time")
         
-        num_messages, words, num_media_messages, num_links = helper.fetch_stats(selected_user,df)
-        st.title("Top Statistics")
-        col1, col2, col3, col4 = st.columns(4)
+        # Monthly Timeline (Plotly)
+        timeline = helper.monthly_timeline(selected_user, df)
+        fig = px.line(timeline, x='time', y='message', title="Monthly Timeline", 
+                     labels={'message': 'Messages', 'time': 'Month-Year'},
+                     template="plotly_dark", color_discrete_sequence=['#00d4ff'])
+        fig.update_layout(hovermode="x unified")
+        st.plotly_chart(fig, use_container_width=True)
 
-        with col1:
-            st.header("Total Messages")
-            st.title(num_messages)
-        with col2:
-            st.header("Total Words")
-            st.title(words)
-        with col3:
-            st.header("Media Shared")
-            st.title(num_media_messages)
-        with col4:
-            st.header("Links Shared")
-            st.title(num_links)
-
-        
-        st.title("Monthly Timeline")
-        timeline = helper.monthly_timeline(selected_user,df)
-        fig,ax = plt.subplots()
-        ax.plot(timeline['time'], timeline['message'],color='green')
-        plt.xticks(rotation='vertical')
-        st.pyplot(fig)
-
-        
-        st.title("Daily Timeline")
+        # Daily Timeline (Plotly)
         daily_timeline = helper.daily_timeline(selected_user, df)
-        fig, ax = plt.subplots()
-        ax.plot(daily_timeline['only_date'], daily_timeline['message'], color='black')
-        plt.xticks(rotation='vertical')
-        st.pyplot(fig)
+        fig2 = px.line(daily_timeline, x='only_date', y='message', title="Daily Timeline",
+                      labels={'message': 'Messages', 'only_date': 'Date'},
+                      template="plotly_dark", color_discrete_sequence=['#ffffff'])
+        fig2.update_layout(hovermode="x unified")
+        st.plotly_chart(fig2, use_container_width=True)
 
+    with tab2:
+        col1, col2 = st.columns(2)
         
-        st.title('Activity Map')
-        col1,col2 = st.columns(2)
-
         with col1:
-            st.header("Most busy day")
-            busy_day = helper.week_activity_map(selected_user,df)
-            fig,ax = plt.subplots()
-            ax.bar(busy_day.index,busy_day.values,color='purple')
-            plt.xticks(rotation='vertical')
-            st.pyplot(fig)
+            st.subheader("Busy Days")
+            busy_day = helper.week_activity_map(selected_user, df)
+            fig = px.bar(x=busy_day.index, y=busy_day.values, 
+                        labels={'x': 'Day of Week', 'y': 'Message Count'},
+                        template="plotly_dark", color_discrete_sequence=['#00d4ff'])
+            st.plotly_chart(fig, use_container_width=True)
 
         with col2:
-            st.header("Most busy month")
+            st.subheader("Busy Months")
             busy_month = helper.month_activity_map(selected_user, df)
-            fig, ax = plt.subplots()
-            ax.bar(busy_month.index, busy_month.values,color='orange')
-            plt.xticks(rotation='vertical')
-            st.pyplot(fig)
+            fig = px.bar(x=busy_month.index, y=busy_month.values,
+                        labels={'x': 'Month', 'y': 'Message Count'},
+                        template="plotly_dark", color_discrete_sequence=['#ff4b4b'])
+            st.plotly_chart(fig, use_container_width=True)
 
-        st.title("Weekly Activity Map")
-        user_heatmap = helper.activity_heatmap(selected_user,df)
-        if user_heatmap.empty:
-            st.info("Not enough activity data to show a weekly heatmap.")
+        st.subheader("Weekly Activity Heatmap")
+        user_heatmap = helper.activity_heatmap(selected_user, df)
+        if not user_heatmap.empty:
+            fig = px.imshow(user_heatmap, labels=dict(x="Hour of Day", y="Day of Week", color="Messages"),
+                           template="plotly_dark", color_continuous_scale="Viridis")
+            st.plotly_chart(fig, use_container_width=True)
         else:
-            fig,ax = plt.subplots()
-            ax = sns.heatmap(user_heatmap)
-            st.pyplot(fig)
+            st.info("Not enough data for heatmap.")
 
-        
+    with tab3:
         if selected_user == 'Overall':
-            st.title('Most Busy Users')
-            x,new_df = helper.most_busy_users(df)
-            fig, ax = plt.subplots()
-
-            col1, col2 = st.columns(2)
-
+            st.subheader("Most Active Users")
+            x, new_df = helper.most_busy_users(df)
+            
+            col1, col2 = st.columns([2, 1])
             with col1:
-                ax.bar(x.index, x.values,color='red')
-                plt.xticks(rotation='vertical')
-                st.pyplot(fig)
+                fig = px.pie(names=x.index, values=x.values, hole=0.4,
+                            template="plotly_dark", color_discrete_sequence=px.colors.qualitative.Pastel)
+                st.plotly_chart(fig, use_container_width=True)
             with col2:
-                st.dataframe(new_df)
-
-        
-        st.title("Wordcloud")
-        df_wc = helper.create_wordcloud(selected_user,df)
-        if df_wc is None:
-            st.info("Not enough words to generate a wordcloud.")
+                st.dataframe(new_df, use_container_width=True)
         else:
-            fig,ax = plt.subplots()
+            st.info("User insights are available in 'Overall' mode to compare with others.")
+
+    with tab4:
+        st.subheader("Word Cloud")
+        df_wc = helper.create_wordcloud(selected_user, df)
+        if df_wc:
+            fig, ax = plt.subplots(figsize=(10, 5))
             ax.imshow(df_wc)
+            ax.axis("off")
+            plt.tight_layout(pad=0)
             st.pyplot(fig)
-
-        
-        most_common_df = helper.most_common_words(selected_user,df)
-
-        st.title('Most commmon words')
-
-        if most_common_df.empty:
-            st.info("No common words found after filtering.")
         else:
-            fig,ax = plt.subplots()
-            ax.barh(most_common_df[0],most_common_df[1])
-            plt.xticks(rotation='vertical')
-            st.pyplot(fig)
+            st.info("Not enough words for a wordcloud.")
 
-        
-        emoji_df = helper.emoji_helper(selected_user,df)
-        st.title("Emoji Analysis")
+        st.subheader("Most Common Words")
+        most_common_df = helper.most_common_words(selected_user, df)
+        if not most_common_df.empty:
+            fig = px.bar(most_common_df, x=1, y=0, orientation='h',
+                        labels={ '1': 'Frequency', '0': 'Word'},
+                        template="plotly_dark", color_discrete_sequence=['#00d4ff'])
+            fig.update_layout(yaxis={'categoryorder':'total ascending'})
+            st.plotly_chart(fig, use_container_width=True)
 
-        col1,col2 = st.columns(2)
+        st.subheader("Emoji Sentiment")
+        emoji_df = helper.emoji_helper(selected_user, df)
+        if not emoji_df.empty:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.dataframe(emoji_df.rename(columns={0: 'Emoji', 1: 'Count'}), use_container_width=True)
+            with col2:
+                fig = px.pie(emoji_df.head(10), names=0, values=1,
+                            template="plotly_dark", title="Top 10 Emojis")
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No emojis found.")
 
-        with col1:
-            st.dataframe(emoji_df)
-        with col2:
-            if emoji_df.empty:
-                st.info("No emojis found.")
-            else:
-                fig,ax = plt.subplots()
-                ax.pie(emoji_df[1].head(),labels=emoji_df[0].head(),autopct="%0.2f")
-                st.pyplot(fig)
-
-
-
-
-
-
-
-
-
-
-
+else:
+    # Landing Page
+    st.markdown('<h1 class="main-title">WhatsApp Insight</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-title">Transform your chat history into visual intelligence.</p>', unsafe_allow_html=True)
+    
+    st.info("👈 Upload your WhatsApp export (the .txt file) from the sidebar to get started.")
+    
+    st.markdown("""
+    ### How to export your chat:
+    1. Open WhatsApp on your phone.
+    2. Open the individual or group chat.
+    3. Tap on the options (three dots) > **More** > **Export chat**.
+    4. Choose **Without Media** for faster analysis.
+    5. Save the `.txt` file and upload it here!
+    """)
