@@ -15,16 +15,44 @@ if uploaded_file is not None:
         st.error("No WhatsApp messages were found in this file. Please upload the exported .txt chat file, not a ZIP or media file.")
         st.stop()
 
-    # fetch unique users
+    
     user_list = [user for user in df['user'].unique().tolist() if user != 'group_notification']
     user_list.sort()
     user_list.insert(0,"Overall")
 
     selected_user = st.sidebar.selectbox("Show analysis wrt",user_list)
 
-    if st.sidebar.button("Show Analysis"):
+    show_analysis = st.sidebar.button("Show Analysis")
 
-        # Stats Area
+    if not show_analysis:
+        preview_df = df if selected_user == 'Overall' else df[df['user'] == selected_user]
+        preview_messages, preview_words, preview_media, preview_links = helper.fetch_stats(selected_user, df)
+
+        st.title("Whatsapp Chat Analyzer")
+        st.subheader(f"Ready to analyze: {selected_user}")
+        st.info("Click Show Analysis in the sidebar to generate the full report.")
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Messages", preview_messages)
+        with col2:
+            st.metric("Words", preview_words)
+        with col3:
+            st.metric("Media", preview_media)
+        with col4:
+            st.metric("Links", preview_links)
+
+        if not preview_df.empty:
+            st.caption(
+                "Chat range: "
+                + str(preview_df['only_date'].min())
+                + " to "
+                + str(preview_df['only_date'].max())
+            )
+
+    if show_analysis:
+
+        
         num_messages, words, num_media_messages, num_links = helper.fetch_stats(selected_user,df)
         st.title("Top Statistics")
         col1, col2, col3, col4 = st.columns(4)
@@ -42,7 +70,7 @@ if uploaded_file is not None:
             st.header("Links Shared")
             st.title(num_links)
 
-        # monthly timeline
+        
         st.title("Monthly Timeline")
         timeline = helper.monthly_timeline(selected_user,df)
         fig,ax = plt.subplots()
@@ -50,7 +78,7 @@ if uploaded_file is not None:
         plt.xticks(rotation='vertical')
         st.pyplot(fig)
 
-        # daily timeline
+        
         st.title("Daily Timeline")
         daily_timeline = helper.daily_timeline(selected_user, df)
         fig, ax = plt.subplots()
@@ -58,7 +86,7 @@ if uploaded_file is not None:
         plt.xticks(rotation='vertical')
         st.pyplot(fig)
 
-        # activity map
+        
         st.title('Activity Map')
         col1,col2 = st.columns(2)
 
@@ -87,7 +115,7 @@ if uploaded_file is not None:
             ax = sns.heatmap(user_heatmap)
             st.pyplot(fig)
 
-        # finding the busiest users in the group(Group level)
+        
         if selected_user == 'Overall':
             st.title('Most Busy Users')
             x,new_df = helper.most_busy_users(df)
@@ -102,7 +130,7 @@ if uploaded_file is not None:
             with col2:
                 st.dataframe(new_df)
 
-        # WordCloud
+        
         st.title("Wordcloud")
         df_wc = helper.create_wordcloud(selected_user,df)
         if df_wc is None:
@@ -112,7 +140,7 @@ if uploaded_file is not None:
             ax.imshow(df_wc)
             st.pyplot(fig)
 
-        # most common words
+        
         most_common_df = helper.most_common_words(selected_user,df)
 
         st.title('Most commmon words')
@@ -125,7 +153,7 @@ if uploaded_file is not None:
             plt.xticks(rotation='vertical')
             st.pyplot(fig)
 
-        # emoji analysis
+        
         emoji_df = helper.emoji_helper(selected_user,df)
         st.title("Emoji Analysis")
 
