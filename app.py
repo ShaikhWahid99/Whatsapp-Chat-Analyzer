@@ -193,6 +193,9 @@ st.sidebar.markdown('<p style="font-size: 24px; font-weight: bold; color: #00d4f
 uploaded_file = st.sidebar.file_uploader("Upload WhatsApp Chat Export (.txt)")
 
 if uploaded_file is not None:
+    if not uploaded_file.name.endswith(".txt"):
+        st.sidebar.error("Error: Please upload a valid WhatsApp .txt file.")
+        st.stop()
     bytes_data = uploaded_file.getvalue()
     data = bytes_data.decode("utf-8")
     df = preprocessor.preprocess(data)
