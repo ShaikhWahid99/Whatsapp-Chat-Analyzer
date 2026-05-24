@@ -2,21 +2,50 @@ import re
 import pandas as pd
 
 def preprocess(data):
-    pattern = '\d{1,2}/\d{1,2}/\d{2,4},\s\d{1,2}:\d{2}\s-\s'
+    pattern = r'\d{1,2}/\d{1,2}/\d{2,4},\s\d{1,2}:\d{2}(?::\d{2})?(?:\s?(?:am|pm|AM|PM))?\s-\s'
 
     messages = re.split(pattern, data)[1:]
     dates = re.findall(pattern, data)
 
     df = pd.DataFrame({'user_message': messages, 'message_date': dates})
+    if df.empty:
+        return df
+
     # convert message_date type
-    df['message_date'] = pd.to_datetime(df['message_date'], format='%d/%m/%Y, %H:%M - ')
+    date_text = df['message_date'].str.replace(r'\s-\s$', '', regex=True)
+    date_text = date_text.str.replace(r'\s*(am|pm)$', lambda match: ' ' + match.group(1).upper(), regex=True)
+
+    parsed_dates = pd.Series(pd.NaT, index=df.index, dtype='datetime64[ns]')
+    date_formats = [
+        '%d/%m/%Y, %H:%M',
+        '%d/%m/%y, %H:%M',
+        '%d/%m/%Y, %H:%M:%S',
+        '%d/%m/%y, %H:%M:%S',
+        '%d/%m/%Y, %I:%M %p',
+        '%d/%m/%y, %I:%M %p',
+        '%d/%m/%Y, %I:%M:%S %p',
+        '%d/%m/%y, %I:%M:%S %p',
+    ]
+    for date_format in date_formats:
+        missing_dates = parsed_dates.isna()
+        parsed_dates.loc[missing_dates] = pd.to_datetime(
+            date_text.loc[missing_dates],
+            format=date_format,
+            errors='coerce',
+        )
+
+    df = df[parsed_dates.notna()].copy()
+    if df.empty:
+        return df
+
+    df['message_date'] = parsed_dates[parsed_dates.notna()]
 
     df.rename(columns={'message_date': 'date'}, inplace=True)
 
     users = []
     messages = []
     for message in df['user_message']:
-        entry = re.split('([\w\W]+?):\s', message)
+        entry = re.split(r'([\w\W]+?):\s', message)
         if entry[1:]:  # user name
             users.append(entry[1])
             messages.append(" ".join(entry[2:]))

@@ -11,9 +11,12 @@ if uploaded_file is not None:
     data = bytes_data.decode("utf-8")
     df = preprocessor.preprocess(data)
 
+    if df.empty:
+        st.error("No WhatsApp messages were found in this file. Please upload the exported .txt chat file, not a ZIP or media file.")
+        st.stop()
+
     # fetch unique users
-    user_list = df['user'].unique().tolist()
-    user_list.remove('group_notification')
+    user_list = [user for user in df['user'].unique().tolist() if user != 'group_notification']
     user_list.sort()
     user_list.insert(0,"Overall")
 
@@ -77,9 +80,12 @@ if uploaded_file is not None:
 
         st.title("Weekly Activity Map")
         user_heatmap = helper.activity_heatmap(selected_user,df)
-        fig,ax = plt.subplots()
-        ax = sns.heatmap(user_heatmap)
-        st.pyplot(fig)
+        if user_heatmap.empty:
+            st.info("Not enough activity data to show a weekly heatmap.")
+        else:
+            fig,ax = plt.subplots()
+            ax = sns.heatmap(user_heatmap)
+            st.pyplot(fig)
 
         # finding the busiest users in the group(Group level)
         if selected_user == 'Overall':
@@ -99,20 +105,25 @@ if uploaded_file is not None:
         # WordCloud
         st.title("Wordcloud")
         df_wc = helper.create_wordcloud(selected_user,df)
-        fig,ax = plt.subplots()
-        ax.imshow(df_wc)
-        st.pyplot(fig)
+        if df_wc is None:
+            st.info("Not enough words to generate a wordcloud.")
+        else:
+            fig,ax = plt.subplots()
+            ax.imshow(df_wc)
+            st.pyplot(fig)
 
         # most common words
         most_common_df = helper.most_common_words(selected_user,df)
 
-        fig,ax = plt.subplots()
-
-        ax.barh(most_common_df[0],most_common_df[1])
-        plt.xticks(rotation='vertical')
-
         st.title('Most commmon words')
-        st.pyplot(fig)
+
+        if most_common_df.empty:
+            st.info("No common words found after filtering.")
+        else:
+            fig,ax = plt.subplots()
+            ax.barh(most_common_df[0],most_common_df[1])
+            plt.xticks(rotation='vertical')
+            st.pyplot(fig)
 
         # emoji analysis
         emoji_df = helper.emoji_helper(selected_user,df)
@@ -123,9 +134,12 @@ if uploaded_file is not None:
         with col1:
             st.dataframe(emoji_df)
         with col2:
-            fig,ax = plt.subplots()
-            ax.pie(emoji_df[1].head(),labels=emoji_df[0].head(),autopct="%0.2f")
-            st.pyplot(fig)
+            if emoji_df.empty:
+                st.info("No emojis found.")
+            else:
+                fig,ax = plt.subplots()
+                ax.pie(emoji_df[1].head(),labels=emoji_df[0].head(),autopct="%0.2f")
+                st.pyplot(fig)
 
 
 
