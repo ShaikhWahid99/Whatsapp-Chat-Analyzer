@@ -1,6 +1,11 @@
-This is a whatsapp Chat Analyzer with thhe help of whatsapp export chat feature it analyse the whole group member messages and show different statistics, we can se particular members enrollment in the group using this project
+Developed in my 6th semester as a part of Python practice and data analysis exploration. This tool analyzes exported WhatsApp chats and generates insights like most active participants, message frequency, emoji usage and more. It also includes graphs, pie charts, and other visual elements for better data visualization.
+
+This project was built earlier, but I’m sharing it now to highlight my data-handling and Python scripting capabilities relevant to the internship role I’m applying for.
+
 This project is made using python librarires like :-
 1) Pandas
 2) Numpy
 3) Matplot lib
 4) Streamlit
+5) Seaborn
+6) Regex
