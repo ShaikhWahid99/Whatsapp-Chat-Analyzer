@@ -13,6 +13,18 @@ st.set_page_config(page_title="WhatsApp Insight", layout="wide", page_icon="📊
 # Custom CSS for Premium Look
 st.markdown("""
 <style>
+[data-testid="stAppToolbar"] {
+        visibility: hidden;
+        display: none;
+    }
+    /* Hides the 'Manage App' / Streamlit badge at the bottom right */
+    footer {
+        visibility: hidden;
+    }
+    .viewerBadge {
+        display: none !important;
+    }
+    
     /* Glassmorphism effect for metrics */
     .metric-card {
         background: rgba(255, 255, 255, 0.05);
